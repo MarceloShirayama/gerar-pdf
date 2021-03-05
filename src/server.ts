@@ -2,7 +2,7 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import ejs from 'ejs';
-import pdf from 'html-pdf';
+import puppeteer from 'puppeteer';
 
 const app = express();
 
@@ -12,6 +12,33 @@ const passengers = [
   { name: 'Eve', flightNumber: 7859, time: '18h00' },
 ];
 
+// eslint-disable-next-line no-unused-vars
+app.get('/pdf', async (request: Request, response: Response) => {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+
+  await page.goto('http://localhost:3333/', {
+    waitUntil: 'networkidle0',
+  });
+
+  const pdf = await page.pdf({
+    printBackground: true,
+    format: 'a4',
+    margin: {
+      top: '20px',
+      bottom: '40px',
+      left: '20px',
+      right: '20px',
+    },
+  });
+
+  await browser.close();
+
+  response.contentType('application/pdf');
+
+  return response.send(pdf);
+});
+
 app.get('/', (request: Request, response: Response) => {
   const filePath = path.join(__dirname, 'print.ejs');
 
@@ -20,27 +47,8 @@ app.get('/', (request: Request, response: Response) => {
     if (err) {
       return response.send('Erro na leitura do arquivo');
     }
-
-    // criar pdf
-    const options = {
-      height: '11.25in',
-      width: '8.5in',
-      header: { height: '20mm' },
-      footer: { height: '20mm' },
-    };
-
-    // eslint-disable-next-line no-shadow,  no-unused-vars
-    pdf.create(html, options).toFile('report.pdf', (err: string, data: string) => {
-      if (err) {
-        return response.send('Erro ao gerar PDF');
-      }
-      // enviar para o navegador
-      return response.send(`
-        <h3>Arquivo gerado com sucesso em:</h3>
-        <p>${filePath}</p>
-      `);
-      // return response.send(html);
-    });
+    // enviar para o navegador
+    return response.send(html);
   });
 });
 
